@@ -14,3 +14,5 @@ lib64/
 .DS_Store
 *.log
 requirements-full.txt
+bin/
+static/
