@@ -1,0 +1,17 @@
+{
+  "OBS_Host": "127.0.0.1",
+  "OBS_Port": 4455,
+  "OBS_Password": "changeme",
+  "FLASK_SECRET_KEY": "changeme",
+  "GOOGLE_CLIENT_ID": "your-google-client-id.apps.googleusercontent.com",
+  "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
+  "YOUTUBE_PLAYLIST_ID": "your-playlist-id",
+  "SCENE_NAME": "changeme",
+  "BOUNCE_SOURCE_NAME": "changeme",
+  "SUPERCHAT_POPUP_SOURCE": "changeme",
+  "SUPERCHAT_TEXT_INPUT": "changeme",
+  "SUPERCHAT_USER_INPUT": "changeme",
+  "BRAINROT_SOURCE_GROUP": "changeme",
+  "BRAINROT_SOURCE_WORDS": "changeme",
+  "BRAINROT_SOURCE_CHALLENGE": "changeme"
+}

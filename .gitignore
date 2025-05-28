@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+client_secret.json
+config.json
+token.json
+songrequest-venv/
+venv/
+.env
+pyvenv.cfg
+include/
+modules/
+lib/
+lib64/
+.DS_Store
+*.log
+requirements-full.txt

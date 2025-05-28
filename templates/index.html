@@ -1,0 +1,376 @@
+<!doctype html>
+<html>
+<head>
+    <title>Song Request Playlist</title>
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background-color: #2e2e2e;
+            font-family: sans-serif;
+            color: white;
+            animation: fadeIn 1s ease-in;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .center-box {
+            max-width: 400px; margin: 100px auto 30px auto;
+            background-color: #3e3e3e; padding: 30px;
+            border-radius: 12px; box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .clear-btn, .add-video-btn {
+            margin-top: 15px; padding: 10px 20px;
+            border: none; border-radius: 6px; color: white;
+            font-size: 16px; cursor: pointer;
+        }
+        .clear-btn { background-color: #ff3333; }
+        .add-video-btn { background-color: #ff3333; }
+        h1, h2 { text-align: center; }
+        ul {
+            list-style: none; padding: 0; max-width: 700px; margin: 0 auto;
+        }
+        li {
+            margin: 1em 0; background-color: #444; padding: 1em;
+            border-radius: 8px; display: flex; align-items: center; gap: 1em;
+            transition: transform 0.3s;
+        }
+        li:hover { transform: scale(1.02); }
+        img { width: 120px; height: auto; border-radius: 6px; }
+        a { text-decoration: none; color: white; display: flex; align-items: center; }
+        a:hover { color: #ffcccc; }
+        .message-banner {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: #ff5c5c; color: white; padding: 12px 24px;
+            border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 9999; font-size: 16px; animation: fadeInBanner 0.5s ease;
+            transition: opacity 1s ease;
+        }
+        @keyframes fadeInBanner {
+            from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        #sidebar {
+            position: fixed; top: 60px; left: -220px; width: 220px;
+            height: calc(100% - 60px); background: #232323; color: #fff;
+            box-shadow: 2px 0 10px #000a; transition: left 0.3s; z-index: 10000;
+            padding: 30px 10px 10px 10px; display: flex; flex-direction: column; gap: 18px;
+        }
+        #sidebar.open { left: 0; }
+        #sidebar-toggle {
+            position: fixed; top: 20px; left: 20px; z-index: 10001;
+            background: #ff3333; color: #fff; border: none; border-radius: 6px;
+            padding: 10px 16px; font-size: 18px; cursor: pointer;
+        }
+        .sidebar-btn {
+            width: 100%; padding: 10px; background: #444; color: #fff;
+            border: none; border-radius: 6px; font-size: 16px; cursor: pointer; text-align: left;
+        }
+        .sidebar-btn:hover { background: #ff3333; }
+    </style>
+</head>
+<body>
+    <div class="center-box">
+        <h1>Song Request Playlist</h1>
+        <p>To add a song, use the <b>!play</b> redeem in chat.</p>
+        <div style="margin-top: 18px; margin-bottom: 18px;">
+            <input id="add-video-input" type="text" placeholder="Paste YouTube link or ID" style="width: 220px; padding: 7px; border-radius: 5px; border: none; font-size: 15px;">
+            <button id="add-video-btn" class="add-video-btn">Add Video</button>
+        </div>
+        <button id="clear-playlist-btn" class="clear-btn">Clear Playlist</button>
+        <button id="skip-btn" class="clear-btn" style="margin-left:10px;">Skip</button>
+    </div>
+    <div style="margin: 30px auto; width: 640px; height: 390px;">
+        <div id="yt-player"></div>
+    </div>
+
+    <div class="now-playing" style="max-width: 700px; margin: 30px auto; background-color: #3e3e3e; padding: 20px; border-radius: 12px; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+        <h2>Currently Playing</h2>
+        <div style="display: flex; align-items: center; gap: 1em;">
+            <img id="now-playing-thumb" src="" alt="Now Playing Thumbnail" style="width: 120px; height: auto; border-radius: 6px;">
+            <div style="flex: 1;">
+                <div id="now-playing-title" style="font-size: 18px; font-weight: bold;"></div>
+                <div id="now-playing-time" style="margin-top: 6px; color: #ccc;"></div>
+                <div style="background: #555; border-radius: 4px; height: 8px; width: 100%; margin-top: 8px;">
+                    <div id="now-playing-progress" style="background: #ff3333; height: 100%; width: 0%; border-radius: 4px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2>Upcoming Queue</h2>
+    <ul id="video-list"></ul>
+
+    <button id="sidebar-toggle">&#9776; Tests</button>
+    <div id="sidebar">
+        <button class="sidebar-btn" onclick="runTest('superchattest')">Test Superchat</button>
+        <button class="sidebar-btn" onclick="runTest('bouncetest')">Test Bounce</button>
+        <button class="sidebar-btn" onclick="runTest('brainrot')">Test Brainrot</button>
+        <button class="sidebar-btn" onclick="runTest('youtubetest')">Test YouTube</button>
+    </div>
+
+    <script>
+let ytPlayer, playerCreated = false, playlist = [], playlistMeta = [], currentIndex = 0, nowPlaying = {};
+
+function formatTime(seconds) {
+    seconds = Math.floor(seconds);
+    const m = Math.floor(seconds / 60), s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+async function fetchNowPlaying() {
+    const res = await fetch("/now_playing");
+    nowPlaying = await res.json();
+    document.getElementById("now-playing-title").textContent = nowPlaying.title;
+    let thumb = nowPlaying.thumbnail;
+    if ((!thumb || thumb === "") && nowPlaying.video_id)
+        thumb = `https://img.youtube.com/vi/${nowPlaying.video_id}/mqdefault.jpg`;
+    document.getElementById("now-playing-thumb").src = thumb;
+}
+fetchNowPlaying();
+setInterval(fetchNowPlaying, 5000);
+
+function updateProgressBar() {
+    if (nowPlaying.duration) {
+        let elapsed = nowPlaying.elapsed || 0;
+        if (!nowPlaying.paused && nowPlaying.start_time)
+            elapsed += (Date.now() / 1000 - nowPlaying.start_time);
+        elapsed = Math.max(0, Math.min(elapsed, nowPlaying.duration));
+        const percent = Math.min(100, (elapsed / nowPlaying.duration) * 100);
+        document.getElementById("now-playing-progress").style.width = percent + "%";
+        document.getElementById("now-playing-time").textContent =
+            `${formatTime(elapsed)} / ${formatTime(nowPlaying.duration)}`;
+    }
+    requestAnimationFrame(updateProgressBar);
+}
+requestAnimationFrame(updateProgressBar);
+
+async function fetchPlaylist() {
+    const res = await fetch("/api/playlist");
+    if (!res.ok) return [];
+    return await res.json();
+}
+
+function createYouTubePlayer(videoId) {
+    ytPlayer = new YT.Player('yt-player', {
+        height: '390', width: '640', videoId: videoId,
+        playerVars: { autoplay: 1, mute: 1, controls: 1 },
+        events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
+    });
+}
+
+function onYouTubeIframeAPIReady() {
+    fetchPlaylist().then(videos => {
+        playlist = videos.map(v => v.video_id);
+        if (playlist.length === 0) return;
+        createYouTubePlayer(playlist[0]);
+        playerCreated = true;
+    });
+}
+
+function onPlayerReady(event) {
+    event.target.playVideo();
+    sendNowPlayingFromPlayer(event.target);
+}
+
+function postNowPlaying(videoId, title, thumbnail, duration, action="play", position=0) {
+    fetch("/set_now_playing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_id: videoId, title, thumbnail, duration, action, position })
+    });
+}
+
+function sendNowPlayingFromPlayer(player, action="play") {
+    const videoData = player.getVideoData();
+    const duration = player.getDuration();
+    let meta = playlistMeta.find(v => v.video_id === videoData.video_id) || {};
+    const position = player.getCurrentTime();
+    let thumbnail = meta.thumbnail;
+    if (!thumbnail && videoData.video_id)
+        thumbnail = `https://img.youtube.com/vi/${videoData.video_id}/mqdefault.jpg`;
+    postNowPlaying(
+        videoData.video_id,
+        meta.title || videoData.title || "",
+        thumbnail || "",
+        duration,
+        action,
+        position
+    );
+}
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.ENDED) {
+        currentIndex++;
+        if (currentIndex < playlist.length)
+            ytPlayer.loadVideoById(playlist[currentIndex]);
+    }
+    if (event.data === YT.PlayerState.PLAYING)
+        sendNowPlayingFromPlayer(event.target, "play");
+    if (event.data === YT.PlayerState.PAUSED)
+        sendNowPlayingFromPlayer(event.target, "pause");
+}
+
+// Poll for seeking
+let lastSeekTime = 0;
+setInterval(() => {
+    if (ytPlayer && ytPlayer.getPlayerState) {
+        const state = ytPlayer.getPlayerState();
+        if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED) {
+            const current = ytPlayer.getCurrentTime();
+            if (Math.abs(current - lastSeekTime) > 2) {
+                sendNowPlayingFromPlayer(ytPlayer, "seek");
+                lastSeekTime = current;
+            }
+        }
+    }
+}, 1000);
+
+function showMessage(message) {
+    let existing = document.querySelector(".message-banner");
+    if (existing) existing.remove();
+    const banner = document.createElement("div");
+    banner.className = "message-banner";
+    banner.textContent = message;
+    document.body.prepend(banner);
+    setTimeout(() => {
+        banner.style.opacity = "0";
+        setTimeout(() => banner.remove(), 1000);
+    }, 3000);
+}
+
+async function refreshVideoList() {
+    const res = await fetch("/api/playlist");
+    if (!res.ok) return;
+    const videos = await res.json();
+    playlistMeta = videos;
+    playlist = videos.map(v => v.video_id);
+
+    // Update "Currently Playing"
+    const nowPlayingTitle = document.getElementById("now-playing-title");
+    const nowPlayingThumb = document.getElementById("now-playing-thumb");
+    const nowPlayingTime = document.getElementById("now-playing-time");
+    if (videos.length > 0) {
+        nowPlayingTitle.textContent = videos[0].title;
+        nowPlayingThumb.src = videos[0].thumbnail;
+        nowPlayingThumb.alt = "Thumbnail for " + videos[0].title;
+    } else {
+        nowPlayingTitle.textContent = "Nothing is currently playing.";
+        nowPlayingThumb.src = "";
+        nowPlayingThumb.alt = "";
+        nowPlayingTime.textContent = "";
+        document.getElementById("now-playing-progress").style.width = "0%";
+    }
+
+    // Update Upcoming Queue
+    const videoList = document.getElementById("video-list");
+    videoList.innerHTML = "";
+    for (const video of videos.slice(1)) {
+        const li = document.createElement("li");
+        li.innerHTML = `
+            <a href="https://www.youtube.com/watch?v=${video.video_id}" target="_blank">
+                <img src="${video.thumbnail}" alt="Thumbnail for ${video.title}">
+                <span>${video.title}</span>
+            </a>
+        `;
+        videoList.appendChild(li);
+    }
+
+    // If player not created and there are videos, create the player
+    if (!playerCreated && videos.length > 0) {
+        playerCreated = true;
+        createYouTubePlayer(videos[0].video_id);
+        currentIndex = 0;
+    }
+
+    // If playlist changed and player exists, sync to first video
+    if (ytPlayer && videos.length > 0) {
+        const currentVideoId = ytPlayer.getVideoData().video_id;
+        if (currentVideoId !== videos[0].video_id) {
+            ytPlayer.loadVideoById(videos[0].video_id);
+            currentIndex = 0;
+        }
+    }
+
+    if (ytPlayer && videos.length > 0) {
+        const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : null;
+        if (state === YT.PlayerState.ENDED || state === YT.PlayerState.CUED) {
+            ytPlayer.loadVideoById(videos[0].video_id);
+            currentIndex = 0;
+        }
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    refreshVideoList();
+
+    document.getElementById("clear-playlist-btn").addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to clear the playlist?")) return;
+        const res = await fetch("/clear_playlist", { method: "POST" });
+        let data = { message: "❌ Unknown error" };
+        try { data = await res.json(); } catch (err) {}
+        showMessage(data.message);
+        if (res.ok) {
+            refreshVideoList();
+            playlist = [];
+            currentIndex = 0;
+            if (ytPlayer) ytPlayer.stopVideo();
+        }
+    });
+
+    document.getElementById("skip-btn").addEventListener("click", async () => {
+        const res = await fetch("/skip", { method: "POST" });
+        let data = { message: "⏭️ Skipped!" };
+        try { data = await res.json(); } catch (err) {}
+        if (data.message) showMessage(data.message);
+        if (res.ok) setTimeout(() => location.reload(), 500);
+    });
+
+    document.getElementById("add-video-btn").addEventListener("click", async () => {
+        const input = document.getElementById("add-video-input");
+        let val = input.value.trim();
+        if (!val) return showMessage("Please enter a YouTube link or ID.");
+        let match = val.match(/(?:v=|\/|be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+        let video_id = match ? match[1] : val;
+        if (!/^[A-Za-z0-9_-]{11}$/.test(video_id)) {
+            showMessage("Invalid YouTube link or ID.");
+            return;
+        }
+        const res = await fetch("/add_video", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `video_id=${encodeURIComponent(video_id)}`
+        });
+        let data = { message: "❌ Unknown error" };
+        try { data = await res.json(); } catch (err) {}
+        showMessage(data.message);
+        if (res.ok) {
+            input.value = "";
+            setTimeout(() => location.reload(), 500); // Refresh page after adding video
+        }
+    });
+
+    // SSE playlist updates
+    const evtSource = new EventSource("/playlist_events");
+    evtSource.onmessage = function(event) {
+        if (event.data === "playlist_updated") refreshVideoList();
+    };
+});
+
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('sidebar-toggle');
+toggleBtn.onclick = () => sidebar.classList.toggle('open');
+function closeSidebar() { sidebar.classList.remove('open'); }
+
+function runTest(testName) {
+    fetch(`/run_test/${testName}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || data.output || "Test triggered!");
+            if (testName === "youtubetest") setTimeout(() => location.reload(), 500); // Refresh after YouTube test
+        })
+        .catch(() => alert("Failed to trigger test."));
+    closeSidebar();
+}
+    </script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>

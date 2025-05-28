@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/static/music-on-obs-style.css">
+    <style>
+        body { background: transparent; margin: 0; }
+        #now-playing-box {
+            background: rgba(112, 112, 112, 0.4);
+            color: #fff;
+            padding: 28px 24px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            box-shadow: 0 4px 24px #000a;
+            min-height: 120px;
+            max-width: 520px; /* was 420px */
+            margin: 0 auto;
+        }
+        #now-playing-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        #now-playing-meta {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+        #now-playing-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+        }
+        #now-playing-title span {
+            display: inline-block;
+            min-width: 100%;
+            animation: scroll-title 16s linear infinite alternate;
+        }
+        @keyframes scroll-title {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        #now-playing-progress-bg {
+            width: 100%;
+            height: 4px; /* was 6px */
+            background: #444;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        #now-playing-progress {
+            height: 100%;
+            width: 0;
+            background: #1db954;
+            transition: width 0.2s linear;
+        }
+    </style>
+</head>
+<body>
+    <div id="now-playing-box">
+        <img id="now-playing-thumb" src="" alt="Thumbnail">
+        <div id="now-playing-meta">
+            <div id="now-playing-title"><span>Loading...</span></div>
+            <div id="now-playing-progress-bg">
+                <div id="now-playing-progress"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let nowPlaying = {};
+        function formatTime(seconds) {
+            seconds = Math.floor(seconds);
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+        async function fetchNowPlaying() {
+            const res = await fetch("/now_playing");
+            nowPlaying = await res.json();
+            document.getElementById("now-playing-title").textContent = nowPlaying.title;
+            // Fallback to YouTube thumbnail if missing
+            let thumb = nowPlaying.thumbnail;
+            if ((!thumb || thumb === "") && nowPlaying.video_id) {
+                thumb = `https://img.youtube.com/vi/${nowPlaying.video_id}/mqdefault.jpg`;
+            }
+            const img = document.getElementById("now-playing-thumb");
+            if (img.src !== thumb && thumb) {
+                img.src = thumb;
+            }
+            // Set opacity based on whether something is playing
+            const box = document.getElementById("now-playing-box");
+            if (!nowPlaying.title || nowPlaying.title.trim() === "") {
+                box.style.opacity = "0.3";
+            } else {
+                box.style.opacity = "1";
+            }
+            lastUpdate = Date.now() / 1000;
+        }
+        fetchNowPlaying();
+        setInterval(fetchNowPlaying, 5000);
+
+        function updateProgressBar() {
+            if (nowPlaying.duration) {
+                let elapsed = nowPlaying.elapsed || 0;
+                if (!nowPlaying.paused && nowPlaying.start_time) {
+                    elapsed += (Date.now() / 1000 - nowPlaying.start_time);
+                }
+                const percent = Math.min(100, (elapsed / nowPlaying.duration) * 100);
+                document.getElementById("now-playing-progress").style.width = percent + "%";
+            }
+            requestAnimationFrame(updateProgressBar);
+        }
+        requestAnimationFrame(updateProgressBar);
+    </script>
+</body>
+</html>

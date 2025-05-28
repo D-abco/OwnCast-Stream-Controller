@@ -1,0 +1,14 @@
+from obswebsocket import obsws, requests
+
+ws = obsws("10.0.0.53", 4455, "adminadmin")
+try:
+    ws.connect()
+    print("Connected!")
+    scenes = ws.call(requests.GetSceneList())
+    print("Raw response:", scenes)
+    print("Response dir:", dir(scenes))
+    print("Response data:", getattr(scenes, 'data', None))
+    print("Response datain:", getattr(scenes, 'datain', None))
+    ws.disconnect()
+except Exception as e:
+    print("Failed to connect or list scenes:", e)
