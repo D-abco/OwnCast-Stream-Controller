@@ -1,7 +1,8 @@
 # SongRequest
 
-A Flask-based web application for managing YouTube song requests, superchats, and interactive OBS overlays for live streams.  
-Integrates with OBS via obs-websocket, YouTube Data API, and supports custom features like DVD Bouncing images, Superchat popups, and Challenge (Brainrot in this case) events.
+A Flask-based web application for managing YouTube song requests, superchats, and interactive OBS overlays for live streams (Designed for use with OwnCast and Tlapbot).
+
+Integrates with OBS via obs-websocket, YouTube Data API, and supports custom features like DVD Bouncing images, Superchat popups, and Challenge (Brainrot in my case) events.
 
 ---
 

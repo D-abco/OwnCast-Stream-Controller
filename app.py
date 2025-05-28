@@ -43,6 +43,7 @@ if not app_secret_key or app_secret_key == 'changeme':
 GOOGLE_CLIENT_ID = config.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = config.get('GOOGLE_CLIENT_SECRET')
 PLAYLIST_ID = config.get('YOUTUBE_PLAYLIST_ID')
+SSE_URL = config.get("SSE_URL", "https://stream.planetfifty.one/events")
 
 app = Flask(__name__)
 app.secret_key = app_secret_key
@@ -58,7 +59,7 @@ Thread(target=playlist_add_worker, daemon=True).start()
 
 # SSE Listener
 def sse_listener():
-    url = "https://stream.planetfifty.one/events"
+    url = SSE_URL
     print("Connecting to SSE stream...")
     client = sseclient.SSEClient(url)
     for event in client:

@@ -2,6 +2,7 @@
   "OBS_Host": "127.0.0.1",
   "OBS_Port": 4455,
   "OBS_Password": "changeme",
+  "SSE_URL": "url_here",
   "FLASK_SECRET_KEY": "changeme",
   "GOOGLE_CLIENT_ID": "your-google-client-id.apps.googleusercontent.com",
   "GOOGLE_CLIENT_SECRET": "your-google-client-secret",
